@@ -1,0 +1,19 @@
+{
+  "Comment": "A state maschine for user registration",
+  "StartAt": "CheckImageQuality",
+  "States": {
+    "CheckImageQuality": {
+      "Type": "Task",
+      "Resource": "${CheckImageQualityFunctionArn}",
+      "Retry": [
+        {
+          "ErrorEquals": ["States.TaskFailed"],
+          "IntervalSeconds": 5,
+          "MaxAttempts": 2,
+          "BackoffRate": 1.5
+        }
+      ],
+      "End": true
+    }
+  }
+}

@@ -1,0 +1,294 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  recognition-app
+
+  Sample SAM Template for recognition-app
+  
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 10
+    Runtime: nodejs16.x
+    Architectures:
+      - x86_64
+
+Resources:
+  RegisterUserStateMaschine: 
+    Type: AWS::Serverless::StateMachine 
+    Properties:
+      Type: EXPRESS
+      DefinitionUri: src/api/user/register/state_maschine.asl.json
+      DefinitionSubstitutions:
+        CheckImageQualityFunctionArn: !GetAtt CheckImageQuality.Arn
+      Policies: 
+        - LambdaInvokePolicy:
+            FunctionName: !Ref CheckImageQuality
+
+  StateMachineApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins:
+          - "http://localhost:8080"
+        AllowHeaders:
+          - Authorization
+          - Content-Type
+          - Access-Control-Allow-Headers
+        AllowMethods:
+          - GET
+          - PUT
+          - OPTIONS
+          - HEAD
+          - POST
+          - Delete
+        MaxAge: 600
+        AllowCredentials: true
+      FailOnWarnings: True
+      DefinitionBody:
+        info:
+          version: '1.0'
+          title:
+            Ref: AWS::StackName
+        paths:
+          "/user/register":
+            post:
+              responses: 
+                default:
+                  description: "Default response for POST /"
+              x-amazon-apigateway-integration:
+                integrationSubtype: "StepFunctions-StartSyncExecution"
+                credentials:
+                  Fn::GetAtt: [MachineApiRole, Arn]
+                requestParameters:
+                  Input: "$request.body"
+                  StateMachineArn: !Ref RegisterUserStateMaschine
+                payloadFormatVersion: "1.0"
+                type: "aws_proxy"
+                connectionType: "INTERNET"
+        openapi: 3.0.1
+        x-amazon-apigateway-cors:
+          allowMethods:
+            - "POST"
+          allowHeaders:
+            - "content-type"
+            - "Access-Control-Allow-Headers"
+            - "X-Forwarded-For"
+          maxAge: 600
+          allowCredentials: false
+          allowOrigins:
+          - "*"
+        x-amazon-apigateway-importexport-version: "1.0"
+
+
+  MachineApiRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - apigateway.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+      - PolicyName: AllowSFNExec
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action: "states:StartSyncExecution"
+              Resource: !Ref RegisterUserStateMaschine
+
+  
+  CheckImageQuality: 
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        # Sourcemap: true # Enabling source maps will create the required NODE_OPTIONS environment variables on your lambda function during sam build
+        EntryPoints: 
+        - app.ts
+    Properties:
+      CodeUri: src/core/checkImageQuality/
+      Handler: app.lambdaHandler
+      Environment:
+        Variables:
+          REGION: !Ref AWS::Region
+
+  
+  
+  HelloWorldFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        # Sourcemap: true # Enabling source maps will create the required NODE_OPTIONS environment variables on your lambda function during sam build
+        EntryPoints: 
+        - app.ts
+    Properties:
+      CodeUri: src/hello-world/
+      Handler: app.lambdaHandler
+      Events:
+        Test:
+          Type: Api
+          Properties:
+            Path: /test
+            Method: get
+            RestApiId: !Ref AppApi
+ 
+  AppApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowMethods: "'POST, GET, PUT, OPTIONS, HEAD, DELETE'"
+        AllowHeaders: "'X-Forwarded-For, Authorization, Access-Control-Allow-Headers, Content-Type'"
+        AllowOrigin: "'http://localhost:8080'"
+        MaxAge: "'600'"
+        AllowCredentials: true
+
+  S3AuthorizedImagesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - "*"
+            AllowedMethods:
+              - GET
+              - PUT
+              - HEAD
+              - POST
+            AllowedOrigins:
+              - "*"
+  
+  RekognitionCollection:
+    Type: AWS::Rekognition::Collection
+    Properties:
+      CollectionId: !Join ["-", [appCollection, !Ref AWS::StackName]]
+
+
+  AuthorizedPersonsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Join ["-", [AuthorizedPersons, !Ref AWS::StackName]]
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: true
+
+  # Nachdem direkter Upload in ein Bucket erfolgt, wird die Funktion durch ein Event ausgelöst
+  # Funktion erzeugt komprimiertes Bild und lädt dieses in ein weiteres Bucket
+  # Bild-URL werden in DB gespeichert
+
+  UploadImageRequestFunction:
+    Type: AWS::Serverless::Function
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        # Sourcemap: true # Enabling source maps will create the required NODE_OPTIONS environment variables on your lambda function during sam build
+        EntryPoints: 
+        - app.ts
+    Properties:
+      CodeUri: src/api/s3/getUploadUrl/
+      Handler: app.lambdaHandler
+      Environment:
+        Variables:
+          BUCKET: !Ref S3AuthorizedImagesBucket
+          REGION: !Ref AWS::Region
+      Policies:
+        - S3WritePolicy:
+            BucketName: !Ref S3AuthorizedImagesBucket
+        - Statement:
+            - Effect: Allow
+              Resource: !Sub "arn:aws:s3:::${S3AuthorizedImagesBucket}/"
+              Action:
+                - s3:putObjectAcl
+      Events:
+        UploadAssetAPI:
+          Type: Api
+          Properties:
+            Path: /user/uploads
+            Method: get
+            RestApiId: !Ref AppApi
+
+  CreateFaceVector:
+    Type: AWS::Serverless::Function
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        # Sourcemap: true # Enabling source maps will create the required NODE_OPTIONS environment variables on your lambda function during sam build
+        EntryPoints:
+          - app.ts
+    Properties:
+      CodeUri: src/s3/onFileUpload
+      Handler: app.lambdaHandler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AuthorizedPersonsTable
+        - CloudWatchPutMetricPolicy: {}
+        - RekognitionFacesManagementPolicy: 
+            CollectionId: !Ref RekognitionCollection
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref AuthorizedPersonsTable
+          REGION: !Ref AWS::Region
+          COLLECTION: !Ref RekognitionCollection
+      Events:
+        ImageUploadedEvent:
+          Type: S3
+          Properties:
+            Bucket: !Ref S3AuthorizedImagesBucket
+            Events: s3:ObjectCreated:*
+
+
+Outputs:
+  ApiUrl:
+    Description: Url für den Zugriff auf das API-Gateway
+    Value: !<!Sub> "https://${AppApi}.execute-api.${AWS::Region}.amazonaws.com"
+  BucketName:
+    Description: "Bucket name:"
+    Value: !Ref S3AuthorizedImagesBucket
+
+
+
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  HelloWorldFunction:
+    Description: "Hello World Lambda Function ARN"
+    Value: !GetAtt HelloWorldFunction.Arn
+  HelloWorldFunctionIamRole:
+    Description: "Implicit IAM Role created for Hello World function"
+    Value: !GetAtt HelloWorldFunctionRole.Arn
+  ApiUrl:
+    Description: Url für den Zugriff auf das API-Gateway
+    Value: !<!Sub> "https://${AppApi}.execute-api.${AWS::Region}.amazonaws.com"
+  BucketName:
+    Description: "Bucket name:"
+    Value: !Ref S3AuthorizedImagesBucket
+  
