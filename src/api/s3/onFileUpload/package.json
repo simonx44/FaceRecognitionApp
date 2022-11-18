@@ -7,6 +7,9 @@
   "author": "SAM CLI",
   "license": "MIT",
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.209.0",
+    "@aws-sdk/client-rekognition": "^3.208.0",
+    "@aws-sdk/client-s3": "^3.208.0",
     "@aws-sdk/client-sns": "^3.212.0",
     "esbuild": "^0.14.14"
   },

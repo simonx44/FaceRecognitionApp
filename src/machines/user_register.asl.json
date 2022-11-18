@@ -1,0 +1,44 @@
+{
+  "Comment": "A state maschine for user registration",
+  "StartAt": "CheckImageQuality",
+  "States": {
+    "CheckImageQuality": {
+      "Type": "Task",
+      "Resource": "${CheckImageQualityFunctionArn}",
+      "InputPath": "$.inputRequest",
+      "ResultPath": "$.detection",
+      "Next": "DoesUserAlreadyExist"
+    },
+    "DoesUserAlreadyExist": {
+      "Type": "Task",
+      "InputPath": "$.inputRequest",
+      "ResultPath": "$.search",
+      "Resource": "${CheckIfUserAleadyExistsFunctionArn}",
+      "Next": "ValidateResult"
+    },
+    "ValidateResult": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.search.Payload.TopMatch.Face.ExternalImageId",
+          "StringEquals": "Special:RIV_NO_FACE_MATCH",
+          "Next": "UserCreated"
+        },
+        {
+          "Variable": "$.search.Payload.TopMatch.Face.IsCallerUser",
+          "BooleanEquals": true,
+          "Next": "UserCreated"
+        }
+      ],
+      "Default": "UserAlreadyExist"
+    },
+    "UserAlreadyExist": {
+      "Type": "Fail",
+      "Cause": "UserAlreadyExist",
+      "Error": "UserAlreadyExist"
+    },
+    "UserCreated": {
+      "Type": "Succeed"
+    }
+  }
+}
