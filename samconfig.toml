@@ -9,4 +9,4 @@ region = "eu-west-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
 image_repositories = []
-parameter_overrides = "PhoneNumber=\"+4915751776937\""
+parameter_overrides = "PhoneNumber=\"+4915751776937\" DeployWithAmplify=\"true\" GithubRepository=\"https://github.com/simonx44/FaceRecognitionApp\" PersonalAcessToken=\"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\" Branch=\"main\""

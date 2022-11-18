@@ -14,12 +14,7 @@ import { AxiosError, AxiosResponse } from "axios";
 import { IApiError } from "@/types";
 import { showNotification } from "@mantine/notifications";
 import { useState } from "react";
-import {
-  IconCheck,
-  IconFaceIdError,
-  IconGitPullRequest,
-  IconBrandMessenger,
-} from "@tabler/icons";
+import { IconCheck, IconFaceIdError, IconBrandMessenger } from "@tabler/icons";
 import { IPropertybag, ISuccessAuthResponse } from "../types";
 
 const S3AuthComponent = () => {
@@ -27,6 +22,7 @@ const S3AuthComponent = () => {
   const [imageMode, updateImageMode] = useState(true);
 
   const authMutation = useMutation(
+    "uploadImage",
     (img: string) => {
       updateImageMode(false);
       return recognitonService.uploadImageToS3(img);

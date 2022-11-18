@@ -1,10 +1,10 @@
 import axios from "axios";
 import { Fragment, useState } from "react";
-import { useTimeoutFn } from "react-use";
+//import { useTimeoutFn } from "react-use";
 import img from "./test.jpeg";
 
 export default function Example() {
-  const [file, setFile] = useState<any>();
+  /* const [file, setFile] = useState<any>();
   let [isShowing, setIsShowing] = useState(true);
   let [, , resetIsShowing] = useTimeoutFn(() => setIsShowing(true), 500);
 
@@ -88,10 +88,10 @@ export default function Example() {
       setFile(img);
     }
   };
-
+ */
   return (
     <div className="flex flex-col items-center py-16">
-      <button
+      {/*       <button
         onClick={() => {
           setIsShowing(false);
           resetIsShowing();
@@ -129,7 +129,7 @@ export default function Example() {
         className="backface-visibility-hidden mt-8 flex transform items-center rounded-full bg-black bg-opacity-20 px-3 py-2 text-sm font-medium text-white transition hover:scale-105 hover:bg-opacity-30 focus:outline-none active:bg-opacity-40"
       >
         <span className="ml-3">Register</span>
-      </button>
+      </button> */}
     </div>
   );
 }

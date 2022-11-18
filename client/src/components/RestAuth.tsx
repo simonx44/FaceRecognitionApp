@@ -113,7 +113,10 @@ const RestAuthComponent = () => {
           <Text> The registration was successful</Text>
           <Text size="sm"> User info:</Text>
           <div className="min-w-full">
-            <UserInfo userData={authMutation.data.data.body.userInfo} />
+            <UserInfo
+              userData={authMutation.data.data.body.userInfo}
+              onUserDelete={() => {}}
+            />
           </div>
         </div>
       )}

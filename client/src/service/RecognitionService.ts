@@ -48,7 +48,9 @@ class RecognitionService {
   }
 
   public async uploadImageToS3(img: string) {
-    const response = await this.httpService.get(`${this.UPLOAD_PATH}?type=png`);
+    const response = await this.httpService.get<any>(
+      `${this.UPLOAD_PATH}?type=png`
+    );
 
     if (!response.data.body) {
       throw new Error("Upload failed");
@@ -80,7 +82,7 @@ class RecognitionService {
 
     console.log(form);
 
-    await axios.post(data.url, form);
+    return await axios.post(data.url, form);
   }
 }
 

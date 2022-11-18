@@ -17,6 +17,26 @@ Parameters:
   PhoneNumber:
     Type: String
     Description: Phone number to be notified, when user tries to sign in
+  DeployWithAmplify:
+    Description: Should the ui deployed too
+    Default: true
+    Type: String
+    AllowedValues:
+      - true
+      - false
+  GithubRepository:
+    Type: String
+    Description: GitHub repository URL (Required if DeployWithAmplify is set)
+  PersonalAcessToken:
+    Type: String
+    Description: Github personal access token (Required if DeployWithAmplify is set)
+  Branch:
+    Type: String
+    Description: Branch to deploy (Required if DeployWithAmplify is set)
+    Default: main
+
+Conditions:
+  IsAmplifyUsed: !Equals [true, !Ref DeployWithAmplify]
 
 Resources:
   AppApi:
@@ -332,6 +352,70 @@ Resources:
             Bucket: !Ref S3AuthAttemptBucket
             Events: s3:ObjectCreated:*
 
+  AmplifyApp:
+    Type: AWS::Amplify::App
+    Condition: IsAmplifyUsed
+    Properties:
+      Name: !Join ["-", [Frontend, !Ref AWS::StackName]]
+      Description: React Frontend
+      Repository: !Ref GithubRepository
+      AccessToken: !Ref PersonalAcessToken
+      CustomRules:
+        - Source: "</^[^.]+$|\\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|ttf|map|json)$)([^.]+$)/>"
+          Target: "/"
+          Status: 200
+      BuildSpec: |-
+        version: 0.1
+        frontend:
+          phases:
+            preBuild:
+              commands:
+                - cd client
+                - npm i
+            build:
+              commands:
+                - npm run build
+          artifacts:
+            baseDirectory: client/dist
+            files:
+              - '**/*'
+          cache:
+            paths:
+              - node_modules/**/*
+      IAMServiceRole: !GetAtt AmplifyRole.Arn
+
+  AmplifyBranch:
+    Type: AWS::Amplify::Branch
+    Condition: IsAmplifyUsed
+    Properties:
+      BranchName: !Ref Branch
+      AppId: !GetAtt AmplifyApp.AppId
+      Description: MAin Branch
+      EnableAutoBuild: true
+
+    ##   Amplify Hosting Role
+  AmplifyRole:
+    Type: AWS::IAM::Role
+    Condition: IsAmplifyUsed
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - amplify.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: Amplify
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: "amplify:*"
+                Resource: "*"
+
 Outputs:
   ApiUrl:
     Description: Url für den Zugriff auf das API-Gateway
@@ -342,3 +426,41 @@ Outputs:
   PhoneNumber:
     Description: "Phone number"
     Value: !Ref PhoneNumber
+  AmplifyAppId:
+    Condition: IsAmplifyUsed
+    Description: Amplify application ID
+    Value: !GetAtt AmplifyApp.AppId
+  AmplifyEnvironmentUpdateCommand:
+    Description: Command - Setzt Entwicklungsvariblen vor dem Deploy des Frontend mittels Amplify
+    Condition: IsAmplifyUsed
+    Value: !Sub
+      - aws amplify update-app --app-id ${AmplifyID} --environment-variables VITE_API_URL=${APIRoot}
+      - AmplifyID: !GetAtt AmplifyApp.AppId
+        APIRoot: !<!Sub> "https://${AppApi}.execute-api.${AWS::Region}.amazonaws.com"
+  CorsUpdateCommand:
+    Description: Setzt Cors AllowOrigins mit der erstellten Amplify-URL
+    Condition: IsAmplifyUsed
+    Value: !Sub
+      - aws apigatewayv2 update-api --api-id ${ApiId} --cors-configuration AllowOrigins=${Url},${Local}
+      - ApiId: !Ref AppApi
+        Url: !Sub https://${Branch}.${AmplifyApp.DefaultDomain}
+        Local: http://localhost:5173
+  AmplifyDeployCommand:
+    Description: Frontend deployen - startet build und deploy Prozess
+    Condition: IsAmplifyUsed
+    Value: !Sub
+      - aws amplify start-job --app-id ${AmplifyID} --branch-name ${BranchName} --job-type RELEASE
+      - AmplifyID: !GetAtt AmplifyApp.AppId
+        BranchName: !Ref Branch
+  ClientDomain:
+    Description: Domain for client
+    Condition: IsAmplifyUsed
+    Value: !Sub
+      - https://${Branch}.${DefaultDomain}
+      - Branch: !Ref Branch
+        DefaultDomain: !GetAtt AmplifyApp.DefaultDomain
+  CloudformationStack:
+    Description: CloudFormation Stack describe Command
+    Value: !Sub
+      - aws cloudformation describe-stacks --stack-name ${StackName}
+      - StackName: !Ref AWS::StackName

@@ -17,7 +17,7 @@ const UserInfo = ({
   isDeletable = true,
   onUserDelete,
 }: {
-  userData: IUser;
+  userData?: IUser;
   onUserDelete: (userId: string) => void;
   isDeletable?: boolean;
 }) => {
@@ -30,7 +30,7 @@ const UserInfo = ({
       onSuccess: (data: AxiosResponse<ISuccessUsersReponse>) => {
         console.log(data);
 
-        onUserDelete(userId);
+        onUserDelete(userId ?? "");
       },
 
       onError: (data: any) => {
@@ -62,18 +62,22 @@ const UserInfo = ({
             alt="Your image"
           />
 
-          {Object.keys(properties).length === 0 && (
+          {properties && Object.keys(properties).length === 0 && (
             <Text className="my-5">No user info found</Text>
           )}
-          {Object.keys(properties).map((el) => {
-            const value = properties[el as keyof IPropertybag];
-            return (
-              <div className="flex flex-row justify-between py-3 px-4" key={el}>
-                <Text>{el}:</Text>
-                <Text>{value}</Text>
-              </div>
-            );
-          })}
+          {properties &&
+            Object.keys(properties).map((el) => {
+              const value = properties[el as keyof IPropertybag];
+              return (
+                <div
+                  className="flex flex-row justify-between py-3 px-4"
+                  key={el}
+                >
+                  <Text>{el}:</Text>
+                  <Text>{value}</Text>
+                </div>
+              );
+            })}
           {isDeletable && (
             <div className="py-3 px-4">
               <Button
@@ -81,7 +85,7 @@ const UserInfo = ({
                 variant="outline"
                 type="submit"
                 loading={deleteRequest.isLoading}
-                onClick={() => deleteRequest.mutate(userId)}
+                onClick={() => deleteRequest.mutate(userId ?? "")}
               >
                 Delete User
               </Button>
