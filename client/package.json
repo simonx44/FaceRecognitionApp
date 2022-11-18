@@ -1,0 +1,39 @@
+{
+  "name": "recognition-ui",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@mantine/core": "^5.7.2",
+    "@mantine/dropzone": "^5.7.2",
+    "@mantine/form": "^5.7.2",
+    "@mantine/hooks": "^5.7.2",
+    "@mantine/notifications": "^5.7.2",
+    "@tabler/icons": "^1.111.0",
+    "axios": "^1.1.3",
+    "konva": "^8.3.14",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-konva": "^18.2.3",
+    "react-query": "^3.39.2",
+    "react-router-dom": "^6.4.3",
+    "react-webcam": "^7.0.1",
+    "ts-node": "^10.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.9",
+    "@types/react": "^18.0.24",
+    "@types/react-dom": "^18.0.8",
+    "@vitejs/plugin-react": "^2.2.0",
+    "autoprefixer": "^10.4.13",
+    "postcss": "^8.4.19",
+    "tailwindcss": "^3.2.4",
+    "typescript": "^4.6.4",
+    "vite": "^3.2.3"
+  }
+}
