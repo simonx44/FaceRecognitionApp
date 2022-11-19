@@ -36,7 +36,6 @@ export default function ImageSource({ onImageUpload }: IImageSourceProps) {
 
   const capture = () => {
     if (!webcamRef.current) return;
-
     const img = webcamRef.current.getScreenshot();
 
     if (img) {
@@ -79,9 +78,9 @@ export default function ImageSource({ onImageUpload }: IImageSourceProps) {
     showError(files[0].errors[0].message);
   };
 
-  useEffect(() => {
-    updateWebcamLoading(typeof webcamRef.current === "undefined");
-  }, [webcamRef.current]);
+  const onWebcamAvailable = (e: any) => {
+    updateWebcamLoading(false);
+  };
 
   return (
     <div>
@@ -105,7 +104,7 @@ export default function ImageSource({ onImageUpload }: IImageSourceProps) {
 
         <Tabs.Panel value="webcam" pt="xs">
           <div className="flex flex-col items-center">
-            {webcamLoading ? (
+            {webcamLoading && (
               <div className="my-16 flex flex-col items-center gap-5">
                 <Loader size="xl" />
                 <Text size="xs">
@@ -113,13 +112,14 @@ export default function ImageSource({ onImageUpload }: IImageSourceProps) {
                   connected
                 </Text>
               </div>
-            ) : (
-              <Webcam
-                ref={webcamRef}
-                screenshotFormat="image/jpeg"
-                className="my-5"
-              ></Webcam>
             )}
+            <Webcam
+              muted={true}
+              ref={webcamRef}
+              onUserMedia={onWebcamAvailable}
+              screenshotFormat="image/jpeg"
+              className={webcamLoading ? "hidden" : "my-5"}
+            ></Webcam>
 
             <Button fullWidth variant="outline" onClick={capture}>
               Capture photo
