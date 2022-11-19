@@ -82,13 +82,18 @@ const useStyles = createStyles((theme) => ({
 interface Link {
   link: string;
   label: string;
+  external?: boolean;
 }
 
 const links: Array<Link> = [
   { link: "/auth", label: "Authenticate" },
   { link: "/register", label: "Sign up" },
   { link: "/admin", label: "Admin View" },
-  { link: "/docs", label: "Docs" },
+  {
+    link: "https://github.com/simonx44/FaceRecognitionApp/blob/main/README.md",
+    label: "Docs",
+    external: true,
+  },
 ];
 
 export default function HeaderMiddle() {
@@ -96,18 +101,37 @@ export default function HeaderMiddle() {
   const { classes, cx } = useStyles();
 
   const items = links.map((link) => (
-    <Link
-      to={link.link}
-      key={link.link}
-      className={
-        "-translate-x-32 " +
-        cx(classes.link, {
-          [classes.linkActive]: link.link === pathname,
-        })
-      }
-    >
-      {link.label}
-    </Link>
+    <div>
+      {link.external ? (
+        <a
+          target="_blank"
+          rel="noopener noreferrer"
+          href={link.link}
+          key={link.link}
+          className={
+            "-translate-x-32 " +
+            cx(classes.link, {
+              [classes.linkActive]: link.link === pathname,
+            })
+          }
+        >
+          {link.label}
+        </a>
+      ) : (
+        <Link
+          to={link.link}
+          key={link.link}
+          className={
+            "-translate-x-32 " +
+            cx(classes.link, {
+              [classes.linkActive]: link.link === pathname,
+            })
+          }
+        >
+          {link.label}
+        </Link>
+      )}
+    </div>
   ));
 
   return (

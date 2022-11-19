@@ -56,7 +56,6 @@ function App() {
           <AppHeader />
           <Routes>
             <Route index path="/auth" element={<AuthenticatePage />} />
-            <Route index path="/docs" element={<DocPage />} />
             <Route path="/register" element={<SignUp />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<Navigate to="/auth" replace />} />
