@@ -60,6 +60,7 @@ Frontend bezogen werden.
 1.5 **DynamoDB**: Es wird eine DynamoDB Tabelle benötigt. Diese speichert neben den angesprochenen Bild-Urls weitere Informationen zu einem Nutzer ab.
 
 1.6 **AWS Rekognition**: Das Herzstück der Anwendung stellt dieser Service dar. Dieser Dienst stellt zahlreiche Funktionalitäten für die Bildanalyse bereit.
+Im Hintergrund werden sämtliche Informationen eines erkannten Gesichtes in einer sogennanten Collection gespeichert [[1]](#1). 
 
 1.7 **SNS Topic**: Das Topic dient in der Anwendung zur Benachrichtigung eines Nutzers über das Authentifizierungsergebnises über eine SMS.
 
@@ -69,23 +70,99 @@ analysiert werden soll.
 
 ### 2. Funktionalitäten #
 
+Sämtliche hier vorgestellten Implementierungen basieren auf einer Referenzarchitektur für Gesichtverifizierung innerhalb des AWS Ökosystens [[1]](#1) [[3]](#3).
+Dennoch wurden Anpassungen getätigt. Als Beispiel wird auf die Verwendung von **Step Functions** verzichtet. 
+
 2.1 **Registrieren**: 
 
-2.1 **Authentifizieren (REST)**:
+Die zugehörige **Lambda Funktion** extrahiert aus dem übergebenen Http-Request-Body das Bild sowie weitere Nutzerinformationen.
+Das Bild wird im Anschluss validiert. Hierbei wird überpürft, ob genau ein Gesicht in einer gewünschten Qualität vorhanden ist. 
+Andernfalls kommt es zu einem Fehler. ***Diese Überprüfung wird bei allen weiteren Funktionen getätigt.*** 
+AWS Rekognition bietet hierfür die Funktion **detectFaces** an. 
+Diese Funktion extrahiert die zentralen Gesichtszüge einer Person (Augen, Nase und Mund) [[2]](#2).
+Nach der Validierung erfolgt eine Überprüfung, ob der Nutzer bereits angemeldet ist. Hierfür dient die Funktion
+**searchFacesByImage** [[4]](#4). Konkret wird analysiert, ob bereits ein FaceVector des Nutzers in der Collection vorhanden ist.
+Ist das nicht der Fall, kann ein neuer Nutzer erstellt werden. Hierfür wird die Funktion **indexFaces** mit dem Bild aufgerufen.
+Diese Funktion erkennt innerhalb eines Bildes Gesichter und extrahiert aus den Gesichtszügen einen **feature vektor** und speichert diesen intern innerhalb einer Collection ab 
+[[5]](#5). Bei diesem Vorgang wird die Userid (wird über das Frontend mitgegeben) dem Aufruf mitgegeben.
+Diese Id wird hierbei dem gespeichterten Gesicht angehangen. Dies ist für die nachfolgende Authentifizierung wichtig.
+Im Anschluss wird das Bild noch in ein S3 Bucket abgelegt. 
+Zudem werden die mitgegebenen Nutzerinformationen in eine DynamoDB Tabelle geschrieben. Darunter befindet sich auch eine FaceId des gespeicherten Gesichts in der Rekogntion Collection.
+Der Client wird über den Statuscode 200 darüber informiert, dass die Registrierung erfolgreich war.
 
-2.1 **Nutzer löschen**:
+2.2 **Authentifizieren (REST)**:
 
-2.1 **Alle Nutzer anzeigen**:
+Erfolgt die Authentifizierung über REST, kann der Client direkt nach der Verarbeitung über das Ergebnis benachrichtigt werden.
+Daher wird über den Body ein Bild an das Backend gesendet. Die zugehörige Funktion validiert im Anschluss das Bild.
+Ist dieses gültig, wird die **Rekognition-Funktion searchFacesByImage** aufgerufen. Hierbei wird das Bild mit Face-Vektoren der Collection abgeglichen.
+Gibt es ein Gesicht, das mindestens 90% Änhlichkeit zu dem Nutzer aufweist, gilt der Nutzer als erkannt.
+Da bei der Erstellung des Vektors (indexFaces) zuvor eine UserId an den Vektor angebracht wurde, kann diese Id im Anschluss bei einem Match wieder entnommen werden.
+Über diese extrahierte UserId kann im Anschluss auf die Datenbank zugegriffen werden.
+Somit wird bei einer erfolgreichen Anmeldung zusätzlich noch der erkannte Nutzer an den Client zurückgegeben. 
 
-2.1 **Anfrage zum direkten Upload in ein Bucket**:
+2.3 **Nutzer löschen**:
 
-2.1 **Authentifizierung (Event-basiert)**:
+Soll ein Nutzer gelöscht werden, erfolgt dies über das Mitsenden der UserId. 
+Die Nutzerdaten werden im Anschluss aus der Datenbanktabelle geladen. Darunter befindet sich neben einer FaceId, auch eine Referenz auf das abgelegte Bild eines 
+Nutzers in einem S3 Bucket. Somit kann der Datenbankeintrag, das Bild aus dem Bucket sowie das indizierte Gesicht gelöscht werden.
+Für den letzten Schritt bietet AWS Rekogntion die Funktion **deleteFaces** an. Hierbei wird die FaceId aus der Datenbank dem Aufruf mitgegeben [[6]](#6).
+
+2.4 **Alle Nutzer anzeigen**:
+
+Über einen AdminView können im Frontend alle registrierten Nutzer angezeigt werden. Im Backend genügt hierfür ein Zugriff auf die Datenbanktabelle.
+Weitere Services werden nicht benötigt.
 
 
+#### Im folgenden wird der Event-basierte Ansatz der Authentifizierung thematisiert:
+
+2.5 **Anfrage zum direkten Upload in ein Bucket**:
+
+Hierbei erfolgt eine Authentifizierung nach dem Upload in ein S3-Bucket. Der Upload kann hierbei nicht direkt vom Client erfolgen.
+Dieser muss sich zuvor über einen REST-Endpunkt eine Upload-Url beschaffen [[7]](#7). Zwar wäre ein direkter Upload ohne diesen Zwischenschritt auch möglich, 
+jedoch müsste jeder Client hierfür AWS Libaries bereitstellen. Dies wurde zu einer stärkeren Kopplung zum AWS Backend führen. <br>
+Daher fragt der Client vor dem eigentlichen Upload bei Backend an. Eine Lambda Funktion erzeugt daraufhin einen temporär gültigen Upload-Link für ein Bild.
+Dieser Link wird zurück an den Client geschickt. Grundlage hierfür ist die AWS Function **createPresignedPost* [[8]](#8).
+Über diesen Link kann dann das Bild direkt in das S3-Bucket geladen werden.
+
+2.6 **Authentifizierung (Event-basiert)**:
+
+Wird ein Bild in das Bucket geladen, wird ein Event ausgelöst, welches die Ausführung einer Lambda Funktion triggert.
+Das Event wurde zuvor wiefolgt registiert:
+
+```
+ImageUploadedEvent:
+Type: S3
+Properties:
+Bucket: !Ref S3AuthAttemptBucket
+Events: s3:ObjectCreated:*
+```
+
+Anders als bei der Anmeldung über REST, wird ein S3 Event der Funktion übergeben. Diese Event beinhaltet eine Referenz auf den S3-Bucket
+sowie auf die hochgeladene Datei. Nach der Überprüfung des Bildes, erfolgt auch hier der Aufruf der **Rekognition-Funktion searchFacesByImage** (siehe 2.2).
+Nachdem das Ergebnis feststeht, ob der Nutzer vorhanden ist oder nicht, wird zu einem **SNS Topic** eine Nachricht veröffentlicht.
+Das Topic ist folgendermaßen konfiguriert.
+
+````
+  AuthResultTopic:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      TopicName: !Join ["-", [AuthResultTopic, !Ref AWS::StackName]]
+      Subscription:
+        - Protocol: sms
+          Endpoint: !Ref PhoneNumber
+
+````
+
+Als Subscription ist hierbei der Typ SMS hinterlegt. So wird die Nachricht an die angegebene Telefonnummer geschickt. 
+Da sich das Projekt nach dem Deployment immer erst in der SMS-Sandbox befindet, wird die SMS nur an die Nummer versendet, die beim Deployment des SAM Projektes angegeben wurde.
+Die SMS sieht folgendermaßen aus:
+
+<p align="center">
+<img src='./smsExmaple.jpg' width=400>
+</p>
 
 
-
-## Beschreibung des Stacks
+## Demoversion
 
 Demo-Version:
 
@@ -221,3 +298,29 @@ Innerhalb einer Übersicht aller vorhandener Stacks kann hierbei der zu löschen
 
 
 # Literaturverzeichnis
+
+
+<a id="1">[1]</a>
+https://aws.amazon.com/de/blogs/machine-learning/identity-verification-using-amazon-rekognition/
+
+
+<a id="2">[2]</a>
+https://docs.aws.amazon.com/rekognition/latest/dg/faces-detect-images.html
+
+<a id="3">[3]</a>
+https://aws.amazon.com/de/blogs/machine-learning/build-your-own-face-recognition-service-using-amazon-rekognition/
+
+<a id="4">[4]</a>
+https://docs.aws.amazon.com/rekognition/latest/APIReference/API_SearchFacesByImage.html
+
+<a id="5">[5]</a>
+https://docs.aws.amazon.com/rekognition/latest/APIReference/API_IndexFaces.html
+
+<a id="6">[6]</a>
+https://docs.aws.amazon.com/rekognition/latest/dg/delete-faces-procedure.html
+
+<a id="7">[7]</a>
+https://aws.amazon.com/de/blogs/compute/uploading-to-amazon-s3-directly-from-a-web-or-mobile-application/
+
+<a id="8">[8]</a>
+https://advancedweb.hu/how-to-use-s3-post-signed-urls/
