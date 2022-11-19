@@ -127,7 +127,7 @@ Dieser Link wird zurück an den Client geschickt. Grundlage hierfür ist die AWS
 2.6 **Authentifizierung (Event-basiert)**:
 
 Wird ein Bild in das Bucket geladen, wird ein Event ausgelöst, welches die Ausführung einer Lambda Funktion triggert.
-Das Event wurde zuvor wiefolgt registiert:
+Das Event wurde zuvor wiefolgt registriert:
 
 ```
 ImageUploadedEvent:
@@ -154,7 +154,7 @@ Das Topic ist folgendermaßen konfiguriert.
 ````
 
 Als Subscription ist hierbei der Typ SMS hinterlegt. So wird die Nachricht an die angegebene Telefonnummer geschickt. 
-Da sich das Projekt nach dem Deployment immer erst in der SMS-Sandbox befindet, wird die SMS nur an die Nummer versendet, die beim Deployment des SAM Projektes angegeben wurde.
+Da sich das Projekt nach dem Deployment immer erst in der SMS-Sandbox befindet, wird die SMS nur an die Nummer versendet, die beim Deployment des SAM Projektes angegeben wurde (siehe [[10]](#phone)).
 Die SMS sieht folgendermaßen aus:
 
 <p align="center">
@@ -198,16 +198,16 @@ Default output format. json <br>
 
 Bevor der Anwendungsstack deployed werden kann, müssen sämtliche Abhängigkeiten installiert werden.
 Werden diese nicht installiert, stehen einzelne Funktionen des serverlosen Backends nicht zur Verfügung, da bei der Ausführung Fehler entstehen. Dies betrifft alle Funktionen, die eine eigene package.json besitzen und daher NPM-Module nutzen.
+Hierfür muss NodeJS installiert sein (https://nodejs.org/en/).
 
-Nach einem Build kann das Backend in die AWS-Cloud deployed werden.
-
-## Build
-
-Serverless Backend builden
+Der Build wird über folgenden Befehl ausgeführt:
 
 ```
 sam build
 ```
+
+Nach einem Build kann das Backend in die AWS-Cloud deployed werden.
+
 
 ## Deployment
 
@@ -225,7 +225,7 @@ Innerhalb des Projektes werden innerhalb der samconfig.toml alle übergebenen Pa
 
 Die Parameter werden im Folgenden beschrieben:
 
-- PhoneNumber: Handynummer zum Empfangen des Authentifizierungsergebnises. Da da Projekt nur innerhalb einer Sandbox ausgeführt wird, muss die angegebene Nummer im Anschluss noch verifiziert werden (siehe )
+- PhoneNumber: Handynummer zum Empfangen des Authentifizierungsergebnises. Da da Projekt nur innerhalb einer Sandbox ausgeführt wird, muss die angegebene Nummer im Anschluss noch verifiziert werden (siehe [[10]](#phone).)
 - DeployWithAmplify: true/false - Soll das Frontend über Amplify deployed werden. Ist dem so, müssen gültige Parameter für die nachfolgenden Parameter angegeben werden. Wenn kein Token oder kein Github-Repositorium vorliegt, muss hierbei false angegeben  
   werden.
 - GithubRepository: Link zu einem hinterlegten GitHub-Repositorium. Dieses muss dieses Projekt enthalten (Frontend + Backend).
@@ -247,7 +247,7 @@ sam deploy
 
 Hierbei müssen die Parameter nicht ein zweites Mal übergeben werden.
 
-## Bereitstellen des Frontends
+## Bereitstellen des Frontends 
 
 Das Frontend lässt sich nach dem Deployment des serverlosen Backends lokal ausführen.
 Informationen für die lokale Ausführung befinden sich innerhalb der README.md des Frontend (/client)
@@ -290,6 +290,20 @@ aws amplify start-job --app-id <MyAmplifyAppId> --branch-name <BranchName> --job
 ```
 
 Der benötigte Befehl kann auch dem Output innerhalb der Konsole entnommen werden.
+
+
+## <a id="phone">Telefonnummer verifizieren<a/>
+
+Da sich das Projekt nach dem Deployment immer erst in der SMS-Sandbox befindet, wird die SMS nur an die Nummer versendet, die beim Deployment des SAM Projektes angegeben wurde.
+Dennoch ist eine zusätzliche manuelle Registierung der Nummer nötig.
+
+1. In der AWS Console AWS SNS suchen
+2. In der Sidebar auf Themen klicken
+3. Topic des deployten Stacks auswählen
+4. Unter Abonnement auf den zugehörigen Button **Abonnement erstellen** klicken
+5. Als Protokoll **SMS** wählen
+6. Nummer eingeben und bestätigen
+
 
 ## Anwendungsstack löschen
 
