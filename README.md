@@ -12,7 +12,7 @@ Projektarbeit Digital Business Master
 <br>
 Wintersemester 2022/2023 
 <br>
-Simon Schwegler (35326) & Oliver Hagel (30306)
+Simon Schwegler (35326) & Oliver Hagel (35297)
 <br>
 HS Ravensburg Weingarten
 <br>
@@ -21,12 +21,12 @@ Betreuender Professor: Prof. Dr. rer. nat. Thomas Bayer
 
 ## Ziel
 
-Das Ziel der vorliegenden Projektarbeit war die Implementierung eines serverlosen Backends zur automatisierten Gesichtserkennung.
-Ein User soll hierbei die Möglichkeit haben sich zu registieren, anzumelden oder seinen Account zu löschen.
-Die Authentifizierung sollte einerseits als klassischer REST-API Endpunkt realisiert werden (Request-Response).
-Andererseit sollte zusätzlich ein Event-Driven Ansatz über eine Benachrichtigung implementiert werden.
+Das Ziel der vorliegenden Projektarbeit ist die Implementierung eines serverlosen Backends zur automatisierten Gesichtserkennung.
+Ein User soll hierbei die Möglichkeit haben, sich zu registrieren, anzumelden oder seinen Account zu löschen.
+Die Authentifizierung soll einerseits als klassischer REST-API Endpunkt realisiert werden (Request-Response).
+Andererseits soll zusätzlich ein Event-Driven Ansatz über eine Benachrichtigung implementiert werden.
 Die Anwendung soll mittels AWS SAM und den damit verbundenen AWS-Diensten realisiert werden. Hierbei steht insbesondere der Dienst
-AWS Rekognition, zur Gesichtserkennung, im Fokus.
+AWS Rekognition zur Gesichtserkennung im Fokus.
 
 ## Architektur
 
@@ -41,9 +41,9 @@ Im folgenden erfolgt eine genauere Beschreibung der verwendeten Ressourcen und F
 ### 1.Ressourcen
 
 1.1 **Web-APP**:
-Der Fokus der Arbeit liegt auf der Implementierung des Backend. Dennoch wurde im Zuge der Realisierung des Projektes eine Web-Anwendung implementiert (REACT.JS).
-Hierdurch können die implementierten Funktionalitäten des Backends einfacher getestet werden. Die Kommunikation erfolgt über HTTP. Das Frontent wurde in das SAM Template aufgenommen
-und mittels **_AWS Amplify_** deployed
+Der Fokus der Arbeit liegt auf der Implementierung des Backends. Dennoch wurde im Zuge der Realisierung des Projektes eine Web-Anwendung implementiert (REACT.JS).
+Hierdurch können die implementierten Funktionalitäten des Backends einfacher getestet werden. Die Kommunikation erfolgt über HTTP. Das Frontend wurde in das SAM Template aufgenommen
+und mittels **_AWS Amplify_** deployed.
 
 1.2 **REST-API**:
 Damit die angebotenen Dienste öffentlich zugänglich sind und somit auch vom Frontend aufgerufen werden können, wird eine REST-API benötigt.
@@ -58,22 +58,22 @@ Frontend bezogen werden.
 1.5 **DynamoDB**: Es wird eine DynamoDB Tabelle benötigt. Diese speichert neben den angesprochenen Bild-Urls weitere Informationen zu einem Nutzer ab.
 
 1.6 **AWS Rekognition**: Das Herzstück der Anwendung stellt dieser Service dar. Dieser Dienst stellt zahlreiche Funktionalitäten für die Bildanalyse bereit.
-Im Hintergrund werden sämtliche Informationen eines erkannten Gesichtes in einer sogennanten Collection gespeichert [[1]](#1).
+Im Hintergrund werden sämtliche Informationen eines erkannten Gesichtes in einer sogenannten Collection gespeichert [[1]](#1).
 
-1.7 **SNS Topic**: Das Topic dient in der Anwendung zur Benachrichtigung eines Nutzers über das Authentifizierungsergebnises über eine SMS.
+1.7 **SNS Topic**: Das Topic dient in der Anwendung zur Benachrichtigung eines Nutzers über das Authentifizierungsergebnisses über eine SMS.
 
 1.8 **S3 Bucket**: Der zweite Bucket dient für die Event-basierte Authentifizierung, indem der Client direkt ein Bild in den Bucket lädt, welches im Folgenden
 analysiert werden soll.
 
 ### 2. Funktionalitäten
 
-Sämtliche hier vorgestellten Implementierungen basieren auf einer Referenzarchitektur für Gesichtverifizierung innerhalb des AWS Ökosystens [[1]](#1) [[3]](#3).
+Sämtliche hier vorgestellten Implementierungen basieren auf einer Referenzarchitektur für Gesichtsverifizierung innerhalb des AWS Ökosystems [[1]](#1) [[3]](#3).
 Dennoch wurden Anpassungen getätigt. Als Beispiel wird auf die Verwendung von **Step Functions** verzichtet.
 
 2.1 **Registrieren**:
 
 Die zugehörige **Lambda Funktion** extrahiert aus dem übergebenen Http-Request-Body das Bild sowie weitere Nutzerinformationen.
-Das Bild wird im Anschluss validiert. Hierbei wird überpürft, ob genau ein Gesicht in einer gewünschten Qualität vorhanden ist.
+Das Bild wird im Anschluss validiert. Hierbei wird überprüft, ob genau ein Gesicht in einer gewünschten Qualität vorhanden ist.
 Andernfalls kommt es zu einem Fehler. **_Diese Überprüfung wird bei allen weiteren Funktionen getätigt._**
 AWS Rekognition bietet hierfür die Funktion **detectFaces** an.
 Diese Funktion extrahiert die zentralen Gesichtszüge einer Person (Augen, Nase und Mund) [[2]](#2).
@@ -82,7 +82,7 @@ Nach der Validierung erfolgt eine Überprüfung, ob der Nutzer bereits angemelde
 Ist das nicht der Fall, kann ein neuer Nutzer erstellt werden. Hierfür wird die Funktion **indexFaces** mit dem Bild aufgerufen.
 Diese Funktion erkennt innerhalb eines Bildes Gesichter und extrahiert aus den Gesichtszügen einen **feature vektor** und speichert diesen intern innerhalb einer Collection ab
 [[5]](#5). Bei diesem Vorgang wird die Userid (wird über das Frontend mitgegeben) dem Aufruf mitgegeben.
-Diese Id wird hierbei dem gespeichterten Gesicht angehangen. Dies ist für die nachfolgende Authentifizierung wichtig.
+Diese Id wird hierbei dem gespeicherten Gesicht angehangen. Dies ist für die nachfolgende Authentifizierung wichtig.
 Im Anschluss wird das Bild noch in ein S3 Bucket abgelegt.
 Zudem werden die mitgegebenen Nutzerinformationen in eine DynamoDB Tabelle geschrieben. Darunter befindet sich auch eine FaceId des gespeicherten Gesichts in der Rekogntion Collection.
 Der Client wird über den Statuscode 200 darüber informiert, dass die Registrierung erfolgreich war.
@@ -109,7 +109,7 @@ Für den letzten Schritt bietet AWS Rekogntion die Funktion **deleteFaces** an. 
 Über einen AdminView können im Frontend alle registrierten Nutzer angezeigt werden. Im Backend genügt hierfür ein Zugriff auf die Datenbanktabelle.
 Weitere Services werden nicht benötigt.
 
-#### Im folgenden wird der Event-basierte Ansatz der Authentifizierung thematisiert:
+#### Im Folgenden wird der Event-basierte Ansatz der Authentifizierung thematisiert:
 
 2.5 **Anfrage zum direkten Upload in ein Bucket**:
 
@@ -123,7 +123,7 @@ Dieser Link wird zurück an den Client geschickt. Grundlage hierfür ist die AWS
 2.6 **Authentifizierung (Event-basiert)**:
 
 Wird ein Bild in das Bucket geladen, wird ein Event ausgelöst, welches die Ausführung einer Lambda Funktion triggert.
-Das Event wurde zuvor wiefolgt registriert:
+Das Event wurde zuvor wie folgt registriert:
 
 ```
 ImageUploadedEvent:
@@ -133,8 +133,8 @@ Bucket: !Ref S3AuthAttemptBucket
 Events: s3:ObjectCreated:*
 ```
 
-Anders als bei der Anmeldung über REST, wird ein S3 Event der Funktion übergeben. Diese Event beinhaltet eine Referenz auf den S3-Bucket
-sowie auf die hochgeladene Datei. Nach der Überprüfung des Bildes, erfolgt auch hier der Aufruf der **Rekognition-Funktion searchFacesByImage** (siehe 2.2).
+Anders als bei der Anmeldung über REST, wird ein S3 Event der Funktion übergeben. Dieses Event beinhaltet eine Referenz auf den S3-Bucket
+sowie auf die hochgeladene Datei. Nach der Überprüfung des Bildes erfolgt auch hier der Aufruf der **Rekognition-Funktion searchFacesByImage** (siehe 2.2).
 Nachdem das Ergebnis feststeht, ob der Nutzer vorhanden ist oder nicht, wird zu einem **SNS Topic** eine Nachricht veröffentlicht.
 Das Topic ist folgendermaßen konfiguriert.
 
@@ -167,7 +167,7 @@ https://main.d256pihlfu3g4h.amplifyapp.com
 
 ## Vorraussetzungen
 
-Um SAM lokal ausführend zu können, wird die AWS CLI benötigt. Daher muss diese installiert werden.
+Um SAM lokal ausführen zu können, wird die AWS CLI benötigt. Daher muss diese installiert werden.
 
 https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2-windows.html
 
@@ -218,15 +218,15 @@ Innerhalb des Projektes werden innerhalb der samconfig.toml alle übergebenen Pa
 
 Die Parameter werden im Folgenden beschrieben:
 
-- PhoneNumber: Handynummer zum Empfangen des Authentifizierungsergebnises. Da da Projekt nur innerhalb einer Sandbox ausgeführt wird, muss die angegebene Nummer im Anschluss noch verifiziert werden (siehe [[10]](#phone).)
+- PhoneNumber: Handynummer zum Empfangen des Authentifizierungsergebnisses. Da da Projekt nur innerhalb einer Sandbox ausgeführt wird, muss die angegebene Nummer im Anschluss noch verifiziert werden (siehe [[10]](#phone).)
 - DeployWithAmplify: true/false - Soll das Frontend über Amplify deployed werden. Ist dem so, müssen gültige Parameter für die nachfolgenden Parameter angegeben werden. Wenn kein Token oder kein Github-Repositorium vorliegt, muss hierbei false angegeben  
   werden.
 - GithubRepository: Link zu einem hinterlegten GitHub-Repositorium. Dieses muss dieses Projekt enthalten (Frontend + Backend).
-  Das Repositorium wird für das Hosting mittels AWS Amplfify benötigt. Wird nur benötigt wenn DeployWithAmplify auf 'true' gesetzt wird.
+  Das Repositorium wird für das Hosting mittels AWS Amplify benötigt. Wird nur benötigt, wenn DeployWithAmplify auf 'true' gesetzt wird.
 - PersonalAcessToken: Token für den Zugriff von auf das Github-Repo - Muss angegeben werden, wenn das Frontend deployed werden soll.
-- Branch: Github-Repo Branch des Frontend, der deployed werden soll - Wird nur benötigt wenn DeployWithAmplify auf 'true' gesetzt wird.
+- Branch: Github-Repo Branch des Frontend, der deployed werden soll - Wird nur benötigt, wenn DeployWithAmplify auf 'true' gesetzt wird.
 
-Alle weiteren Konfigurationen können mit 'yes' oder mit mit dem Default konfiguriert werden.
+Alle weiteren Konfigurationen können mit 'yes' oder mit dem Default konfiguriert werden.
 Wird das Frontend nicht über Amplify deployed ( DeployWithAmplify=false), können die letzten oben genannten drei Parameter einfach ignoriert oder mit einem beliebigen Wert konfiguriert werden.
 
 Token kann wie folgt erzeugt werden:
@@ -256,7 +256,7 @@ aws cloudformation describe-stacks --stack-name <Name des Stacks>
 Bei der Ausführung der folgenden Commands sollte darauf geachtet werden, dass diese innerhalb einer Zeile ausgeführt werden. Beim Kopieren können unerwünschte Zeilenumbrüche entstehen, sodass nur ein Teil eines Commands ausgeführt wird.
 Daher gegebenenfalls den generierten Command vor der Ausführung noch formatieren.
 
-Die Commands werden für jeden Stack inital erzeugt und werden dem Output nach einem Deployment entnommen. Entprechend wird eine 1:1-Ausführung der Beispiels-Commands nicht funktionieren.
+Die Commands werden für jeden Stack inital erzeugt und werden dem Output nach einem Deployment entnommen. Entsprechend wird eine 1:1-Ausführung der Beispiels-Commands nicht funktionieren.
 
 1. Cors-Header der erstellten Http API konfigurieren. Der auszuführende Command kann dem SAM-Output entnommen werden.
 
@@ -266,13 +266,13 @@ Format des Commands:
 aws apigatewayv2 update-api --api-id 8aco6poc6c --cors-configuration AllowOrigins=https://main.d3ovku2thzo8rv.amplifyapp.com,http://localhost:8080
 ```
 
-2. Entwicklungsvaribalen für das Frontend anpassen. Form des Commands:
+2. Entwicklungsvariablen für das Frontend anpassen. Form des Commands:
 
 ```
 aws amplify update-app --app-id do68bi531l99o --environment-variables VUE_APP_API_ROOT=cogtest,VUE_APP_REGION=eu-central-1,VUE_APP_USER_POOL_ID=eu-central-1_QI3YWvRUC,VUE_APP_CLIENT_ID=3rcu02qt5umvvqp898e0d1e6s6,VUE_APP_URL=https://cogtest-457908813616.auth.eu-central-1.amazoncognito.com
 ```
 
-Diese Vorgehensweise ist nur bei einem intitalen Deployment nötig. Im Anschluss wird nach jeder Änderung des hinterlegten Git-Repos das Deployment automatisch durch Amplify gestartet.
+Diese Vorgehensweise ist nur bei einem initialen Deployment nötig. Im Anschluss wird nach jeder Änderung des hinterlegten Git-Repos das Deployment automatisch durch Amplify gestartet.
 
 3. Build und Deploy des Frontend im Anschluss starten
 
@@ -287,7 +287,7 @@ Der benötigte Befehl kann auch dem Output innerhalb der Konsole entnommen werde
 ## <a id="phone">Telefonnummer verifizieren<a/>
 
 Da sich das Projekt nach dem Deployment immer erst in der SMS-Sandbox befindet, wird die SMS nur an die Nummer versendet, die beim Deployment des SAM Projektes angegeben wurde.
-Dennoch ist eine zusätzliche manuelle Registierung der Nummer nötig.
+Dennoch ist eine zusätzliche manuelle Registrierung der Nummer nötig.
 
 1. In der AWS Console AWS SNS suchen
 2. In der Sidebar auf Themen klicken

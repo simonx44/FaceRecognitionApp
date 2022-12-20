@@ -86,7 +86,7 @@ const RestAuthComponent = () => {
           <Text> Unfortunately the authentication failed</Text>
 
           <Alert
-            className="w-1/2 my-5"
+            className="my-5"
             icon={<IconFaceIdError size={16} />}
             title="Reason:"
             color="red"
@@ -116,6 +116,7 @@ const RestAuthComponent = () => {
             <UserInfo
               userData={authMutation.data.data.body.userInfo}
               onUserDelete={() => {}}
+              isDeletable={false}
             />
           </div>
         </div>
