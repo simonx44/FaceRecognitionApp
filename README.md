@@ -161,7 +161,7 @@ Die SMS sieht folgendermaßen aus:
 
 Demo-Version:
 
-https://main.d256pihlfu3g4h.amplifyapp.com
+https://main.d5ida4o9xgb7u.amplifyapp.com
 
 # Deployment
 
